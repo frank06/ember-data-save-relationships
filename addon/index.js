@@ -2,27 +2,34 @@ import Ember from 'ember';
 
 export default Ember.Mixin.create({
   
-  VERSION: 1,
-
   serializeHasMany(snapshot, data, relationship) {
+    
     this._super(snapshot, data, relationship);
-    data.relationships = data.relationships || {};
-
+    
     snapshot.eachRelationship(relationship => {
-      const array = snapshot.record.get(relationship);
-      data.relationships[relationship] = data.relationships[relationship] || {};
-      data.relationships[relationship].data = array.map(obj => {
-        const serialized = obj.serialize();
+      
+      if (this.get(`attrs.${relationship}.serialize`) === true) {
+        
+        const array = snapshot.record.get(relationship);
 
-        if (obj.id) {
-          serialized.data.id = obj.id;
-        } else {
-          serialized.data.attributes.__id__ = obj.get('_internalModel')[Ember.GUID_KEY];
-        }
+        data.relationships = data.relationships || {};
+        data.relationships[relationship] = data.relationships[relationship] || {};
+        data.relationships[relationship].data = array.map(obj => {
         
-        return serialized.data;
+          const serialized = obj.serialize();
+
+          if (obj.id) {
+            serialized.data.id = obj.id;
+          } else {
+            serialized.data.attributes.__id__ = obj.get('_internalModel')[Ember.GUID_KEY];
+          }
         
-      });
+          return serialized.data;
+        
+        });
+        
+      }
+
     });
 
   },
@@ -36,6 +43,8 @@ export default Ember.Mixin.create({
         const record = store.peekAll(elem.type)
           .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
           .findBy('_internalModel.' + Ember.GUID_KEY, elem.attributes.__id__);
+
+        console.log(record.get('currentState.stateName'));
 
         if (record) {
           record.unloadRecord();

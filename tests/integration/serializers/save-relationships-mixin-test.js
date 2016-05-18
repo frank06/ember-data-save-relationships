@@ -42,7 +42,6 @@ module('serializers/save-relationships-mixin', {
     
     registry.register('adapter:application', DS.JSONAPIAdapter);
     registry.register('serializer:application', DS.JSONAPISerializer);
-
     
   },
   
@@ -52,7 +51,7 @@ module('serializers/save-relationships-mixin', {
 
 });
 
-test("normalizeResponse with embedded objects", function(assert) {
+test("serialize artist with embedded albums (with ID)", function(assert) {
   
   registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
     attrs: {
@@ -99,7 +98,79 @@ test("normalizeResponse with embedded objects", function(assert) {
       type: 'artists'
     }
   });
-  
 
+});
+
+test("serialize artist without embedded albums", function(assert) {
+
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: false }
+    }
+  }));
+
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      artist: { serialize: false }
+    }
+  }));
+
+  const serializer = store.serializerFor("artist");
+  let artistJSON;
+
+  Ember.run(function() {
+
+    const artist = store.createRecord('artist', { name: "Radiohead" });
+    const album1 = store.createRecord('album', { name: "Kid A" });
+    const album2 = store.createRecord('album', { name: "Kid B" });
+    const album3 = store.createRecord('album', { name: "Kid C" });
+
+    artist.get('albums').pushObjects([album1, album2, album3]);
+
+    artistJSON = serializer.serialize(artist._createSnapshot());
+
+  });
+  
+  assert.deepEqual(artistJSON, { data: {
+      attributes: { name: 'Radiohead' }, type: 'artists'
+    }
+  });
+
+});
+
+
+test("serialize artist with embedded albums (with and without ID)", function(assert) {
+  
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: true }
+    }
+  }));
+  
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      artist: { serialize: false }
+    }
+  }));
+
+  const serializer = store.serializerFor("artist");
+  let artistJSON;
+  
+  Ember.run(function() {
+    
+    const artist = store.createRecord('artist', { name: "Radiohead" });
+    const album1 = store.createRecord('album', { id: 1, name: "Kid A" });
+    const album4 = store.createRecord('album', { name: "Kid D" });
+    artist.get('albums').pushObjects([album1, album4]);
+  
+    artistJSON = serializer.serialize(artist._createSnapshot());
+
+  });
+  
+  // __id__ should not be present in album with id
+  assert.equal(artistJSON.data.relationships.albums.data[0].attributes.__id__, undefined);
+  
+  // __id__ should be present in album without id
+  assert.ok(artistJSON.data.relationships.albums.data[1].attributes.__id__);
 
 });
