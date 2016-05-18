@@ -59,11 +59,7 @@ test("serialize artist with embedded albums (with ID)", function(assert) {
     }
   }));
   
-  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
-    attrs: {
-      artist: { serialize: false }
-    }
-  }));
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
 
   const serializer = store.serializerFor("artist");
   let artistJSON;
@@ -109,11 +105,7 @@ test("serialize artist without embedded albums", function(assert) {
     }
   }));
 
-  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
-    attrs: {
-      artist: { serialize: false }
-    }
-  }));
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
 
   const serializer = store.serializerFor("artist");
   let artistJSON;
@@ -147,11 +139,7 @@ test("serialize artist with embedded albums (with and without ID)", function(ass
     }
   }));
   
-  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
-    attrs: {
-      artist: { serialize: false }
-    }
-  }));
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
 
   const serializer = store.serializerFor("artist");
   let artistJSON;

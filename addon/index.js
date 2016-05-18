@@ -23,6 +23,9 @@ export default Ember.Mixin.create({
           } else {
             serialized.data.attributes.__id__ = obj.get('_internalModel')[Ember.GUID_KEY];
           }
+          
+          // do not allow embedded relationships
+          delete serialized.data.relationships;
         
           return serialized.data;
         
