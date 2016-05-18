@@ -44,8 +44,6 @@ export default Ember.Mixin.create({
           .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
           .findBy('_internalModel.' + Ember.GUID_KEY, elem.attributes.__id__);
 
-        console.log(record.get('currentState.stateName'));
-
         if (record) {
           record.unloadRecord();
         }
