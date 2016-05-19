@@ -233,3 +233,59 @@ test("normalize artist + album", function(assert) {
   assert.equal(secondAlbum.get('name'), "Kid B");
 
 });
+
+test("normalize album belongs-to artist", function(assert) {
+  
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: false }
+    }
+  }));
+  
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      artist: { serialize: true }
+    }
+  }));
+
+  const serializer = store.serializerFor("album");
+  let albumJSON;
+  
+  Ember.run(function() {
+    
+    const artist = store.createRecord('artist', { name: "Radiohead" });
+    const album = store.createRecord('album', { name: "Kid A", artist });
+  
+    albumJSON = serializer.serialize(album._createSnapshot());
+    
+    const internalId = albumJSON.data.relationships.artist.data.attributes.__id__;
+    
+    const serverJSON = { data:
+      {
+        id: "1",
+        type: 'album',
+        attributes: { name: "Kid A"},
+        relationships: {
+          artists: {
+            data: {
+              id: "1",
+              type: "artist",
+              attributes: {
+                name: "Radiohead",
+                __id__: internalId
+              }
+            }
+          }
+        }
+      }
+    };
+    
+    serializer.normalizeResponse(store, Album, serverJSON, '1', 'createRecord');
+
+  });
+  
+  const firstAlbum = store.peekAll('album').findBy("name", "Kid A");
+  // console.log(firstAlbum.get('name'));
+  assert.equal(firstAlbum.get('artist.name'), "Radiohead");
+
+});

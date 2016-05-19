@@ -53,29 +53,47 @@ export default Ember.Mixin.create({
     this._super(...arguments);
     this.serializeRelationship(...arguments);
   },
+  
+  updateRecord(json, store) {
+    
+    const record = store.peekAll(json.type)
+      .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
+      .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
+
+    if (record) {
+      record.unloadRecord();
+    }
+
+    store.push({ data: json });
+    
+    delete json.attributes;
+    delete json.relationships;
+    return json;
+
+  },
 
   normalizeSaveResponse(store, modelName, obj) {
     
     const rels = obj.data.relationships || [];
     
     Object.keys(rels).forEach(rel => {
-      
-      rels[rel].data.forEach(elem => {
-        const record = store.peekAll(elem.type)
-          .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
-          .findBy('_internalModel.' + Ember.GUID_KEY, elem.attributes.__id__);
-
-        if (record) {
-          record.unloadRecord();
-        }
+      if (Array.isArray(rels[rel].data)) {
+        // hasMany
+        rels[rel].data = rels[rel].data.map(json => this.updateRecord(json, store));
+      } else {
+        // belongsTo
+        rels[rel].data.relationships = {
+          albums: [{
+            data: { id: obj.data.id, type: obj.data.type }
+          }]
+        };
         
-        store.push({ data: elem });
-        
-      });
+        rels[rel].data = this.updateRecord(rels[rel].data, store);
+      }
       
     });
 
-    return this._super(...arguments);
+    return this._super(store, modelName, obj);
 
   }
 
