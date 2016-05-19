@@ -81,13 +81,7 @@ export default Ember.Mixin.create({
         // hasMany
         rels[rel].data = rels[rel].data.map(json => this.updateRecord(json, store));
       } else {
-        // belongsTo
-        rels[rel].data.relationships = {
-          albums: [{
-            data: { id: obj.data.id, type: obj.data.type }
-          }]
-        };
-        
+        // belongsTo        
         rels[rel].data = this.updateRecord(rels[rel].data, store);
       }
       
