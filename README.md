@@ -1,26 +1,15 @@
-# Ember-data-save-relationships
+# ember-data-save-relationships
 
-This README outlines the details of collaborating on this Ember addon.
+Include this mixin in your serializers and it will save your `hasMany` and `belongsTo` relationships' records.
+
+More info: http://emberigniter.com/saving-relationships-hasmany-json-api/
 
 ## Installation
 
-* `git clone` this repository
-* `npm install`
-* `bower install`
+* `ember-data-save-relationships`
 
-## Running
+## Bugs
 
-* `ember server`
-* Visit your app at http://localhost:4200.
-
-## Running Tests
-
-* `npm test` (Runs `ember try:testall` to test your addon against multiple Ember versions)
-* `ember test`
-* `ember test --server`
-
-## Building
-
-* `ember build`
-
-For more information on using ember-cli, visit [http://ember-cli.com/](http://ember-cli.com/).
+  - fix belongs to
+  - fix stack overflow (ie can have both serialize: true without blowing up)
+  - fix singularize models 
