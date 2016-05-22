@@ -10,6 +10,4 @@ More info: http://emberigniter.com/saving-relationships-hasmany-json-api/
 
 ## Bugs
 
-  - fix belongs to
   - fix stack overflow (ie can have both serialize: true without blowing up)
-  - fix singularize models 

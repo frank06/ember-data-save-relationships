@@ -78,12 +78,17 @@ export default Ember.Mixin.create({
     const rels = obj.data.relationships || [];
     
     Object.keys(rels).forEach(rel => {
-      if (Array.isArray(rels[rel].data)) {
+      let relationshipData = rels[rel].data;
+      if (Array.isArray(relationshipData)) {
         // hasMany
-        rels[rel].data = rels[rel].data.map(json => this.updateRecord(json, store));
+        relationshipData = relationshipData.map(json => {
+          json.type = Ember.String.singularize(json.type);
+          this.updateRecord(json, store);
+        });
       } else {
-        // belongsTo        
-        rels[rel].data = this.updateRecord(rels[rel].data, store);
+        // belongsTo
+        relationshipData.type = Ember.String.singularize(relationshipData.type);
+        relationshipData = this.updateRecord(relationshipData, store);
       }
       
     });

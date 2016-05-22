@@ -216,8 +216,8 @@ test("normalize artist + album", function(assert) {
        attributes: { name: 'Radiohead' },
        relationships: { albums: { data: 
      [ { id: "89329", attributes: { name: "Kid A", __id__: internalId }, type: 'album' },
-       { id: "2", attributes: { name: "Kid B" }, type: 'album' } ] } },
-       type: 'artist' } };
+       { id: "2", attributes: { name: "Kid B" }, type: 'albums' } ] } },
+       type: 'artists' } };
     
     serializer.normalizeResponse(store, Artist, serverJSON, '1', 'createRecord');
 
@@ -262,13 +262,13 @@ test("normalize album belongs-to artist", function(assert) {
     const serverJSON = { data:
       {
         id: "1",
-        type: 'album',
+        type: 'albums',
         attributes: { name: "Kid A"},
         relationships: {
           artists: {
             data: {
               id: "1",
-              type: "artist",
+              type: "artists",
               attributes: {
                 name: "Radiohead XXXX",
                 __id__: internalId
