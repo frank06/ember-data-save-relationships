@@ -216,7 +216,7 @@ test("normalize artist + album", function(assert) {
        attributes: { name: 'Radiohead' },
        relationships: { albums: { data: 
      [ { id: "89329", attributes: { name: "Kid A", __id__: internalId }, type: 'album' },
-       { id: "2", attributes: { name: "Kid B2" }, type: 'album' } ] } },
+       { id: "2", attributes: { name: "Kid B" }, type: 'album' } ] } },
        type: 'artist' } };
     
     serializer.normalizeResponse(store, Artist, serverJSON, '1', 'createRecord');
@@ -228,8 +228,7 @@ test("normalize artist + album", function(assert) {
   assert.equal(firstAlbum.get('currentState.stateName'), "root.loaded.saved");
   assert.equal(firstAlbum.get('id'), "89329");
   
-  // second album should have updated name -- TODO check should be B2???
-  const secondAlbum = store.peekAll('album').objectAt(0);
+  const secondAlbum = store.peekAll('album').objectAt(1);
   assert.equal(secondAlbum.get('name'), "Kid B");
 
 });
@@ -271,7 +270,7 @@ test("normalize album belongs-to artist", function(assert) {
               id: "1",
               type: "artist",
               attributes: {
-                name: "Radiohead",
+                name: "Radiohead XXXX",
                 __id__: internalId
               }
             }
@@ -284,8 +283,8 @@ test("normalize album belongs-to artist", function(assert) {
 
   });
   
+  // should NOT update name
   const firstAlbum = store.peekAll('album').findBy("name", "Kid A");
-  // console.log(firstAlbum.get('name'));
   assert.equal(firstAlbum.get('artist.name'), "Radiohead");
 
 });

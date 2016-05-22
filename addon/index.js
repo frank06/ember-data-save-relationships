@@ -61,13 +61,14 @@ export default Ember.Mixin.create({
       .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
 
     if (record) {
-      record.unloadRecord();
+      // record.unloadRecord();
+      record.set('id', json.id);
+      record._internalModel.flushChangedAttributes();
+      record._internalModel.adapterWillCommit();
+      store.didSaveRecord(record._internalModel);
+      // store.push({ data: json });
     }
 
-    store.push({ data: json });
-    
-    delete json.attributes;
-    delete json.relationships;
     return json;
 
   },
