@@ -17,15 +17,35 @@ export default JSONAPISerializer.extend(SaveRelationshipsMixin, {
 });
 ```
 
+Now an `Artist` payload may include `attributes` like:
+
+```
+data: {
+  id: null,
+  type: "artist",
+  attributes: {
+    name: "Radiohead",
+    __id__: "3internal-model"
+  },
+  relationships: {
+    albums: {
+      data: [
+        { id: null, type: "albums", attributes: { name: "Kid A" } }
+      ]
+    }
+  }
+}
+```
+
 More info: http://emberigniter.com/saving-relationships-hasmany-json-api/
 
 ## Installation
 
-* `ember-data-save-relationships`
+* `ember install ember-data-save-relationships`
 
 ## Notes
 
- - A temporary ID (`__id__`) will be sent along with the relationship's data `attributes`. Your server API **must** return this attribute intact along with a proper `id` in its data:
+ - A temporary ID (`__id__`) will be sent along with the relationship's data `attributes`. Your server API **must** return this attribute intact along with a proper `id` after saving the relationship records:
  ```
  data: {
    id: "1"
