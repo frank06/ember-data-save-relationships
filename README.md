@@ -24,13 +24,19 @@ data: {
   id: null,
   type: "artist",
   attributes: {
-    name: "Radiohead",
-    __id__: "3internal-model"
+    name: "Radiohead"
   },
   relationships: {
     albums: {
       data: [
-        { id: null, type: "albums", attributes: { name: "Kid A" } }
+        {
+          id: null,
+          type: "albums",
+          attributes: {
+            name: "Kid A",
+            __id__: "0internal-model"
+          }
+        }
       ]
     }
   }
