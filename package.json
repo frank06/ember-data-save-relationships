@@ -1,7 +1,7 @@
 {
   "name": "ember-data-save-relationships",
-  "version": "0.0.3",
-  "description": "The default blueprint for ember-cli addons.",
+  "version": "0.0.4",
+  "description": "Save embedded JSON API relationships",
   "directories": {
     "doc": "doc",
     "test": "tests"
