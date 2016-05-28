@@ -4,7 +4,7 @@ import { module, test } from 'qunit';
 import DS from 'ember-data';
 import SaveRelationshipsMixin from 'ember-data-save-relationships';
 
-var registry, store, Artist, Album, Manager;
+var registry, store, Artist, Album, ContactPerson;
 
 QUnit.dump.maxDepth = 15;
 
@@ -23,13 +23,13 @@ module('serializers/save-relationships-mixin', {
     });
     owner.__container__ = container;
     
-    Manager = DS.Model.extend({
+    ContactPerson = DS.Model.extend({
       name: DS.attr()
     });
     
     Artist = DS.Model.extend({
       name: DS.attr(),
-      manager: DS.belongsTo(),
+      contactPerson: DS.belongsTo(),
       albums: DS.hasMany('album')
     });
     
@@ -38,7 +38,7 @@ module('serializers/save-relationships-mixin', {
       artist: DS.belongsTo('artist')
     });
     
-    registry.register('model:manager', Manager);
+    registry.register('model:contact-person', ContactPerson);
     registry.register('model:artist', Artist);
     registry.register('model:album', Album);
     
@@ -62,7 +62,7 @@ test("serialize artist with embedded albums (with ID)", function(assert) {
   registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
     attrs: {
       albums: { serialize: true },
-      manager: { serialize: false }
+      contactPerson: { serialize: false }
     }
   }));
   
@@ -109,7 +109,7 @@ test("serialize artist without embedded albums", function(assert) {
   registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
     attrs: {
       albums: { serialize: false },
-      manager: { serialize: false }
+      contactPerson: { serialize: false }
     }
   }));
 
@@ -138,24 +138,24 @@ test("serialize artist without embedded albums", function(assert) {
 
 });
 
-test("serialize artist with embedded manager and albums (with ID)", function(assert) {
+test("serialize artist with embedded contact person and albums (with ID)", function(assert) {
   
   registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
     attrs: {
       albums: { serialize: true },
-      manager: { serialize: true }
+      contactPerson: { serialize: true }
     }
   }));
   
   registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
 
   const serializer = store.serializerFor("artist");
-  let artistJSON, album1, album2, album3, manager;
+  let artistJSON, album1, album2, album3, contactPerson;
   
   Ember.run(function() {
     
-    manager = store.createRecord('manager', { name: "Brian Message" });
-    const artist = store.createRecord('artist', { name: "Radiohead", manager });
+    contactPerson = store.createRecord('contactPerson', { name: "Brian Message" });
+    const artist = store.createRecord('artist', { name: "Radiohead", contactPerson });
     album1 = store.createRecord('album', { name: "Kid A" });
     album2 = store.createRecord('album', { name: "Kid B" });
     album3 = store.createRecord('album', { name: "Kid C" });
@@ -175,11 +175,11 @@ test("serialize artist with embedded manager and albums (with ID)", function(ass
     type: 'albums' } ]
   };
   
-  const managerJSON = { data:
+  const contactPersonJSON = { data:
     {
-      type: "managers",
+      type: "contact-people",
       attributes: {
-        __id__: getInternalId(manager),
+        __id__: getInternalId(contactPerson),
         name: "Brian Message"
       }
     }
@@ -189,7 +189,7 @@ test("serialize artist with embedded manager and albums (with ID)", function(ass
       attributes: { name: 'Radiohead' },
       relationships: {
         albums: albumsJSON,
-        manager: managerJSON
+        'contact-person': contactPersonJSON
       },
       type: 'artists'
     }
