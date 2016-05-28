@@ -5,29 +5,30 @@ export default Ember.Mixin.create({
   serializeRelationship(snapshot, data, rel) {
     
     const kind = rel.kind;
+    const relationship = rel.key;
     
-    snapshot.eachRelationship(relationship => {
+    if (this.get(`attrs.${relationship}.serialize`) === true) {
+
+      data.relationships = data.relationships || {};
+      data.relationships[relationship] = data.relationships[relationship] || {};
       
-      if (this.get(`attrs.${relationship}.serialize`) === true) {
-
-        data.relationships = data.relationships || {};
-        data.relationships[relationship] = data.relationships[relationship] || {};
-        
-        if (kind === "belongsTo") {
-          data.relationships[relationship].data = this.serializeRecord(snapshot.belongsTo(relationship));
-        }
-        
-        if (kind === "hasMany") {
-          data.relationships[relationship].data = snapshot.hasMany(relationship).map(this.serializeRecord);
-        }
-        
+      if (kind === "belongsTo") {
+        data.relationships[relationship].data = this.serializeRecord(snapshot.belongsTo(relationship));
       }
-
-    });
+      
+      if (kind === "hasMany") {
+        data.relationships[relationship].data = snapshot.hasMany(relationship).map(this.serializeRecord);
+      }
+      
+    }
 
   },
   
   serializeRecord(obj) {
+    
+    if (!obj) {
+      return null;
+    }
     
     const serialized = obj.serialize();
 

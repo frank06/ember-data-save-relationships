@@ -1,12 +1,15 @@
 import Ember from 'ember';
+import QUnit from 'qunit';
 import { module, test } from 'qunit';
 import DS from 'ember-data';
 import SaveRelationshipsMixin from 'ember-data-save-relationships';
 
-var registry, store, Artist, Album;
+var registry, store, Artist, Album, Manager;
+
+QUnit.dump.maxDepth = 15;
 
 module('serializers/save-relationships-mixin', {
-
+  
   beforeEach() {
     
     registry = new Ember.Registry();
@@ -20,8 +23,13 @@ module('serializers/save-relationships-mixin', {
     });
     owner.__container__ = container;
     
+    Manager = DS.Model.extend({
+      name: DS.attr()
+    });
+    
     Artist = DS.Model.extend({
       name: DS.attr(),
+      manager: DS.belongsTo(),
       albums: DS.hasMany('album')
     });
     
@@ -30,6 +38,7 @@ module('serializers/save-relationships-mixin', {
       artist: DS.belongsTo('artist')
     });
     
+    registry.register('model:manager', Manager);
     registry.register('model:artist', Artist);
     registry.register('model:album', Album);
     
@@ -52,7 +61,8 @@ test("serialize artist with embedded albums (with ID)", function(assert) {
   
   registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
     attrs: {
-      albums: { serialize: true }
+      albums: { serialize: true },
+      manager: { serialize: false }
     }
   }));
   
@@ -98,7 +108,8 @@ test("serialize artist without embedded albums", function(assert) {
 
   registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
     attrs: {
-      albums: { serialize: false }
+      albums: { serialize: false },
+      manager: { serialize: false }
     }
   }));
 
@@ -122,6 +133,65 @@ test("serialize artist without embedded albums", function(assert) {
   
   assert.deepEqual(artistJSON, { data: {
       attributes: { name: 'Radiohead' }, type: 'artists'
+    }
+  });
+
+});
+
+test("serialize artist with embedded manager and albums (with ID)", function(assert) {
+  
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: true },
+      manager: { serialize: true }
+    }
+  }));
+  
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
+
+  const serializer = store.serializerFor("artist");
+  let artistJSON, album1, album2, album3, manager;
+  
+  Ember.run(function() {
+    
+    manager = store.createRecord('manager', { name: "Brian Message" });
+    const artist = store.createRecord('artist', { name: "Radiohead", manager });
+    album1 = store.createRecord('album', { name: "Kid A" });
+    album2 = store.createRecord('album', { name: "Kid B" });
+    album3 = store.createRecord('album', { name: "Kid C" });
+
+    artist.get('albums').pushObjects([album1, album2, album3]);
+    
+    artistJSON = serializer.serialize(artist._createSnapshot());
+
+  });
+  
+  const albumsJSON = { data: [
+    { attributes: { name: 'Kid A', __id__: getInternalId(album1) },
+      type: 'albums' },
+    { attributes: { name: 'Kid B', __id__: getInternalId(album2) },
+      type: 'albums' },
+    { attributes: { name: 'Kid C', __id__: getInternalId(album3) },
+    type: 'albums' } ]
+  };
+  
+  const managerJSON = { data:
+    {
+      type: "managers",
+      attributes: {
+        __id__: getInternalId(manager),
+        name: "Brian Message"
+      }
+    }
+  };
+  
+  assert.deepEqual(artistJSON, { data: {
+      attributes: { name: 'Radiohead' },
+      relationships: {
+        albums: albumsJSON,
+        manager: managerJSON
+      },
+      type: 'artists'
     }
   });
 
@@ -209,13 +279,11 @@ test("normalize artist + album", function(assert) {
   
     artistJSON = serializer.serialize(artist._createSnapshot());
     
-    const internalId = artistJSON.data.relationships.albums.data[0].attributes.__id__;
-    
     const serverJSON = { data: 
      { id: "1",
        attributes: { name: 'Radiohead' },
        relationships: { albums: { data: 
-     [ { id: "89329", attributes: { name: "Kid A", __id__: internalId }, type: 'album' },
+     [ { id: "89329", attributes: { name: "Kid A", __id__: getInternalId(album1) }, type: 'album' },
        { id: "2", attributes: { name: "Kid B" }, type: 'albums' } ] } },
        type: 'artists' } };
     
@@ -288,3 +356,7 @@ test("normalize album belongs-to artist", function(assert) {
   assert.equal(firstAlbum.get('artist.name'), "Radiohead");
 
 });
+
+function getInternalId(model) {
+  return model.get('_internalModel')[Ember.GUID_KEY];
+}
