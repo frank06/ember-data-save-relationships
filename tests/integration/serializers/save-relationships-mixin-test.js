@@ -4,7 +4,7 @@ import { module, test } from 'qunit';
 import DS from 'ember-data';
 import SaveRelationshipsMixin from 'ember-data-save-relationships';
 
-var registry, store, Artist, Album, ContactPerson, SimpleModel, SimpleModelContainer;
+var registry, store, Artist, Album, Track, ContactPerson, SimpleModel, SimpleModelContainer;
 
 QUnit.dump.maxDepth = 15;
 
@@ -42,12 +42,19 @@ module('serializers/save-relationships-mixin', {
     
     Album = DS.Model.extend({
       name: DS.attr(),
-      artist: DS.belongsTo('artist')
+      artist: DS.belongsTo('artist'),
+      tracks: DS.hasMany('track')
+    });
+
+    Track = DS.Model.extend({
+      name: DS.attr(),
+      album: DS.belongsTo('album')
     });
     
     registry.register('model:contact-person', ContactPerson);
     registry.register('model:artist', Artist);
     registry.register('model:album', Album);
+    registry.register('model:track', Track);
     registry.register('model:simple-model', SimpleModel);
     registry.register('model:simple-model-container', SimpleModelContainer);
     
@@ -74,8 +81,18 @@ test("serialize artist with embedded albums (with ID)", function(assert) {
       contactPerson: { serialize: false }
     }
   }));
-  
-  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
+
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      artist: { serialize: false }
+    }
+  }));
+
+  registry.register('serializer:track', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      album: { serialize: false }
+    }
+  }));
 
   const serializer = store.serializerFor("artist");
   let artistJSON;
@@ -86,6 +103,8 @@ test("serialize artist with embedded albums (with ID)", function(assert) {
     const album1 = store.createRecord('album', { name: "Kid A" });
     const album2 = store.createRecord('album', { name: "Kid B" });
     const album3 = store.createRecord('album', { name: "Kid C" });
+
+    serializer.serialize(artist._createSnapshot());
 
     artist.get('albums').pushObjects([album1, album2, album3]);
   
@@ -112,6 +131,80 @@ test("serialize artist with embedded albums (with ID)", function(assert) {
   });
 
 });
+
+test("serialize artist with embedded albums (with ID) with embedded tracks", function(assert) {
+  
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: true },
+      contactPerson: { serialize: false }
+    }
+  }));
+  
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      tracks: { serialize: true},
+      artist: { serialize: false}
+    }
+  }));
+
+  registry.register('serializer:track', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      album: { serialize: false}
+    }
+  }));
+
+  const serializer = store.serializerFor("artist");
+  let artistJSON;
+  
+  let artist, album1, track1, track2, track3;
+
+  Ember.run(function() {
+    
+    artist = store.createRecord('artist', { name: "Radiohead" });
+    album1 = store.createRecord('album', { name: "Kid A" });
+    track1 = store.createRecord('track', { name: "Track 1"});
+    track2 = store.createRecord('track', { name: "Track 2"});
+    track3 = store.createRecord('track', { name: "Track 3"});
+
+    artist.get('albums').pushObjects([album1]);
+  
+    assert.equal(artist.get('albums.length'), 1);
+
+    album1.get('tracks').pushObjects([track1, track2, track3]);
+
+    assert.equal(album1.get('tracks.length'), 3);
+    
+    artistJSON = serializer.serialize(artist._createSnapshot());
+
+  });
+  
+
+  const tracksJSON = { data: [
+    { attributes: { name: 'Track 1', __id__: getInternalId(track1) },
+      type: 'tracks' },
+    { attributes: { name: 'Track 2', __id__: getInternalId(track2) },
+      type: 'tracks' },
+    { attributes: { name: 'Track 3', __id__: getInternalId(track3) },
+      type: 'tracks' }
+       ]
+  };
+
+  const albumsJSON = { data: [
+    { attributes: { name: 'Kid A', __id__: getInternalId(album1) },
+      relationships: { tracks: tracksJSON },
+      type: 'albums' } ]
+  };
+
+  assert.deepEqual(artistJSON, { data: {
+      attributes: { name: 'Radiohead' },
+      relationships: { albums: albumsJSON },
+      type: 'artists'
+    }
+  });
+
+});
+
 
 test("serialize model with no attributes", function(assert) {
   
@@ -192,7 +285,11 @@ test("serialize artist with embedded contact person and albums (with ID)", funct
     }
   }));
   
-  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      artist: { serialize: false }
+    }
+  }));
 
   const serializer = store.serializerFor("artist");
   let artistJSON, album1, album2, album3, contactPerson;

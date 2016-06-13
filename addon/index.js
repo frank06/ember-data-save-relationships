@@ -1,12 +1,13 @@
 import Ember from 'ember';
 
 export default Ember.Mixin.create({
-  
+
   serializeRelationship(snapshot, data, rel) {
-    
     const relKind = rel.kind;
     const relKey = rel.key;
     
+
+    console.log("this.get(attrs.relKey: " + this.get(`attrs.${relKey}`) + ` for relKey ${relKey}`); 
     if (this.get(`attrs.${relKey}.serialize`) === true) {
 
       data.relationships = data.relationships || {};
@@ -18,33 +19,57 @@ export default Ember.Mixin.create({
       }
       
       if (relKind === "hasMany") {
-        data.relationships[key].data = snapshot.hasMany(relKey).map(this.serializeRecord);
+        data.relationships[key].data = snapshot.hasMany(relKey).map(this.serializeRecord.bind(this));
       }
       
     }
 
   },
   
+  serialize (snapshot, options) {
+    if (!(options && options.__isSaveRelationshipsMixinCallback))
+    {
+      this.set("_visitedRecordIds", {});
+    }
+    return this._super(...arguments);
+  },
+
+  _visitedRecordIds: {},
+
   serializeRecord(obj) {
-    
     if (!obj) {
       return null;
     }
     
-    const serialized = obj.serialize();
+    const serialized = obj.serialize({__isSaveRelationshipsMixinCallback: true});
 
     if (obj.id) {
       serialized.data.id = obj.id;
+      this.get('_visitedRecordIds')[obj.id] = {};
     } else {
       if (!serialized.data.attributes)
       {
         serialized.data.attributes = {};
       }
       serialized.data.attributes.__id__ = obj.record.get('_internalModel')[Ember.GUID_KEY];
+      this.get('_visitedRecordIds')[serialized.data.attributes.__id__] = {};
     }
-    
-    // do not allow embedded relationships
-    delete serialized.data.relationships;
+
+
+    for (let relationshipId in serialized.data.relationships) {
+      if (!!this.get('_visitedRecordIds')[relationshipId])
+      {
+        delete serialized.data.relationships[relationshipId];
+      }
+    }
+
+    if (serialized.data.relationships === {})
+    {
+      delete serialized.data.relationships;
+    }
+
+    // // do not allow embedded relationships
+    // delete serialized.data.relationships;
   
     return serialized.data;
   
@@ -61,7 +86,6 @@ export default Ember.Mixin.create({
   },
   
   updateRecord(json, store) {
-    
     const record = store.peekAll(json.type)
       .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
       .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
@@ -80,7 +104,6 @@ export default Ember.Mixin.create({
   },
 
   normalizeSaveResponse(store, modelName, obj) {
-    
     const rels = obj.data.relationships || [];
     
     Object.keys(rels).forEach(rel => {
