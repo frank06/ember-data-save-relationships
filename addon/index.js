@@ -36,6 +36,10 @@ export default Ember.Mixin.create({
     if (obj.id) {
       serialized.data.id = obj.id;
     } else {
+      if (!serialized.data.attributes)
+      {
+        serialized.data.attributes = {};
+      }
       serialized.data.attributes.__id__ = obj.record.get('_internalModel')[Ember.GUID_KEY];
     }
     
