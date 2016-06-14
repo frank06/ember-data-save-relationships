@@ -132,7 +132,7 @@ test("serialize artist with embedded albums (with ID)", function(assert) {
 
 });
 
-test("serialize artist with embedded albums (with ID) with embedded tracks", function(assert) {
+test("serialize artist with embedded album (with ID) with embedded tracks", function(assert) {
   
   registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
     attrs: {
@@ -442,6 +442,114 @@ test("normalize artist + album", function(assert) {
   assert.equal(secondAlbum.get('name'), "Kid B");
 
 });
+
+test("normalize artist with embedded album (with ID) with embedded tracks", function(assert) {
+  
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: true },
+      contactPerson: { serialize: false }
+    }
+  }));
+  
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      tracks: { serialize: true},
+      artist: { serialize: false}
+    }
+  }));
+
+  registry.register('serializer:track', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      album: { serialize: false}
+    }
+  }));
+
+  const serializer = store.serializerFor("artist");
+  let artistJSON;
+  
+  let artist, album1, track1, track2, track3;
+
+  Ember.run(function() {
+    
+    artist = store.createRecord('artist', { name: "Radiohead" });
+    album1 = store.createRecord('album', { name: "Kid A" });
+    track1 = store.createRecord('track', { name: "Track 1"});
+    track2 = store.createRecord('track', { name: "Track 2"});
+    track3 = store.createRecord('track', { name: "Track 3"});
+
+    artist.get('albums').pushObjects([album1]);
+  
+    assert.equal(artist.get('albums.length'), 1);
+
+    album1.get('tracks').pushObjects([track1, track2, track3]);
+
+    assert.equal(album1.get('tracks.length'), 3);
+    
+    artistJSON = serializer.serialize(artist._createSnapshot());
+
+    const serverJSON = 
+    {
+      data: 
+      {
+        id: "1",
+        attributes: 
+        {
+          name: 'Radiohead'
+        },
+        relationships:
+        { albums: { data: [ {
+                id: "89329", 
+                attributes: { name: "Kid A", __id__: getInternalId(album1) },
+                type: 'album',
+                relationships:
+                { tracks: { data: [
+                      {
+                        id: "2",
+                        attributes: { name: "Track 1", __id__: getInternalId(track1) },
+                        type: "track"
+                      },
+                      { 
+                        id: "3",
+                        attributes: { name: "Track 2", __id__: getInternalId(track2) },
+                        type: "track"
+                      },
+                      { 
+                        id: "4",
+                        attributes: { name: "Track 3", __id__: getInternalId(track3) },
+                        type: "track"
+                      }
+                ] } }
+        } ] } },
+
+        type: 'artists'
+      }
+    };
+    
+    serializer.normalizeResponse(store, Artist, serverJSON, '1', 'createRecord');
+
+  });
+  
+  //Album
+  const firstAlbum = store.peekAll('album').findBy("name", "Kid A");
+  assert.equal(firstAlbum.get('currentState.stateName'), "root.loaded.saved");
+  assert.equal(firstAlbum.get('id'), "89329");
+  
+  //Tracks
+  const firstTrack = store.peekAll('track').findBy("name", "Track 1");
+  assert.equal(firstTrack.get('currentState.stateName'), "root.loaded.saved");
+  assert.equal(firstTrack.get('id'), "2");
+
+  const secondTrack = store.peekAll('track').findBy("name", "Track 2");
+  assert.equal(secondTrack.get('currentState.stateName'), "root.loaded.saved");
+  assert.equal(secondTrack.get('id'), "3");
+
+  const thirdTrack = store.peekAll('track').findBy("name", "Track 3");
+  assert.equal(thirdTrack.get('currentState.stateName'), "root.loaded.saved");
+  assert.equal(thirdTrack.get('id'), "4");
+
+});
+
 
 test("normalize album belongs-to artist", function(assert) {
   

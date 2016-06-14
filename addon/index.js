@@ -6,8 +6,6 @@ export default Ember.Mixin.create({
     const relKind = rel.kind;
     const relKey = rel.key;
     
-
-    console.log("this.get(attrs.relKey: " + this.get(`attrs.${relKey}`) + ` for relKey ${relKey}`); 
     if (this.get(`attrs.${relKey}.serialize`) === true) {
 
       data.relationships = data.relationships || {};
@@ -107,23 +105,37 @@ export default Ember.Mixin.create({
     const rels = obj.data.relationships || [];
     
     Object.keys(rels).forEach(rel => {
-      let relationshipData = rels[rel].data;
-      if (Array.isArray(relationshipData)) {
-        // hasMany
-        relationshipData = relationshipData.map(json => {
-          json.type = Ember.String.singularize(json.type);
-          this.updateRecord(json, store);
-        });
-      } else {
-        // belongsTo
-        relationshipData.type = Ember.String.singularize(relationshipData.type);
-        relationshipData = this.updateRecord(relationshipData, store);
-      }
-      
+      this.normalizeRelationship(rels[rel].data, store);
     });
 
     return this._super(store, modelName, obj);
 
+  },
+
+  normalizeRelationship(relationshipData, store) {
+    if (Array.isArray(relationshipData)) {
+      // hasMany
+      relationshipData = relationshipData.map(json => {
+        let internalRelationships = json.relationships;
+        if (internalRelationships !== undefined) {
+          Object.keys(internalRelationships).forEach(rel => {
+            this.normalizeRelationship(internalRelationships[rel].data, store);
+          });
+        }
+        json.type = Ember.String.singularize(json.type);
+        this.updateRecord(json, store);
+      });
+    } else {
+      // belongsTo
+      let internalRelationships = relationshipData.relationships;
+      if (internalRelationships !== undefined) {
+        Object.keys(internalRelationships).forEach(rel => {
+          this.normalizeRelationship(internalRelationships[rel].data, store);
+        });
+      }
+      relationshipData.type = Ember.String.singularize(relationshipData.type);
+      relationshipData = this.updateRecord(relationshipData, store);
+    }
   }
 
 });
