@@ -4,7 +4,7 @@ import { module, test } from 'qunit';
 import DS from 'ember-data';
 import SaveRelationshipsMixin from 'ember-data-save-relationships';
 
-var registry, store, Artist, Album, ContactPerson;
+var registry, store, Artist, Album, ContactPerson, SimpleModel, SimpleModelContainer;
 
 QUnit.dump.maxDepth = 15;
 
@@ -22,6 +22,13 @@ module('serializers/save-relationships-mixin', {
       owner: owner
     });
     owner.__container__ = container;
+    
+    SimpleModel = DS.Model.extend({
+    });
+    
+    SimpleModelContainer = DS.Model.extend({
+      model: DS.belongsTo('simple-model'),
+    });
     
     ContactPerson = DS.Model.extend({
       name: DS.attr()
@@ -41,6 +48,8 @@ module('serializers/save-relationships-mixin', {
     registry.register('model:contact-person', ContactPerson);
     registry.register('model:artist', Artist);
     registry.register('model:album', Album);
+    registry.register('model:simple-model', SimpleModel);
+    registry.register('model:simple-model-container', SimpleModelContainer);
     
     registry.register('service:store', DS.Store.extend({ adapter: '-default' }));
         
@@ -99,6 +108,42 @@ test("serialize artist with embedded albums (with ID)", function(assert) {
       attributes: { name: 'Radiohead' },
       relationships: { albums: albumsJSON },
       type: 'artists'
+    }
+  });
+
+});
+
+test("serialize model with no attributes", function(assert) {
+  
+  registry.register('serializer:simple-model-container', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      model: { serialize: true }
+    }
+  }));
+
+  const serializer = store.serializerFor("simple-model-container");
+  let model, container, simpleModelContainerJSON;
+  
+  Ember.run(function() {
+    
+    model = store.createRecord('simple-model');
+    container = store.createRecord('simple-model-container');
+    container.set('model', model);
+
+    simpleModelContainerJSON = serializer.serialize(container._createSnapshot());
+
+  });
+  
+  assert.deepEqual(simpleModelContainerJSON, { data: {
+      relationships: { 
+        model: {
+          data: {
+            type: 'simple-models',
+            attributes: { __id__: getInternalId(model) }
+          } 
+        }
+      },
+      type: 'simple-model-containers'
     }
   });
 
