@@ -108,7 +108,7 @@ export default Ember.Mixin.create({
       let relationshipData = rels[rel].data;
       if (relationshipData !== undefined)
       {
-        this.normalizeRelationship(relationshipData, store);
+        this.normalizeRelationship(relationshipData, store, obj);
       }
     });
 
@@ -116,10 +116,15 @@ export default Ember.Mixin.create({
 
   },
 
-  normalizeRelationship(relationshipData, store) {
+  normalizeRelationship(relationshipData, store, obj) {
     if (Array.isArray(relationshipData)) {
       // hasMany
       relationshipData = relationshipData.map(json => {
+        let includedData = obj.included.filter(datum => datum.id === json.id);
+        if (includedData.length > 0)
+        {
+          json = includedData[0];
+        }
         let internalRelationships = json.relationships;
         if (internalRelationships !== undefined) {
           Object.keys(internalRelationships).forEach(rel => {
