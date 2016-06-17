@@ -84,17 +84,22 @@ export default Ember.Mixin.create({
   },
   
   updateRecord(json, store) {
-    const record = store.peekAll(json.type)
-      .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
-      .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
+    if (json.attributes !== undefined && json.attributes.__id__ !== undefined)
+    {
 
-    if (record) {
-      // record.unloadRecord();
-      record.set('id', json.id);
-      record._internalModel.flushChangedAttributes();
-      record._internalModel.adapterWillCommit();
-      store.didSaveRecord(record._internalModel);
-      // store.push({ data: json });
+      const record = store.peekAll(json.type)
+        .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
+        .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
+
+      if (record) {
+        // record.unloadRecord();
+        record.set('id', json.id);
+        record._internalModel.flushChangedAttributes();
+        record._internalModel.adapterWillCommit();
+        store.didSaveRecord(record._internalModel);
+        // store.push({ data: json });
+      }
+
     }
 
     return json;
