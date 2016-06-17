@@ -105,7 +105,11 @@ export default Ember.Mixin.create({
     const rels = obj.data.relationships || [];
     
     Object.keys(rels).forEach(rel => {
-      this.normalizeRelationship(rels[rel].data, store);
+      let relationshipData = rels[rel].data;
+      if (relationshipData !== undefined)
+      {
+        this.normalizeRelationship(relationshipData, store);
+      }
     });
 
     return this._super(store, modelName, obj);
