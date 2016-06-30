@@ -43,7 +43,7 @@ data: {
 }
 ```
 
-More info: http://emberigniter.com/saving-relationships-hasmany-json-api/
+More info: http://emberigniter.com/saving-models-relationships-json-api/
 
 ## Installation
 
