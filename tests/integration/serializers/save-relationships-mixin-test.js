@@ -443,6 +443,61 @@ test("normalize artist + album", function(assert) {
 
 });
 
+test("normalize artist + album when album is lazy loaded", function(assert) {
+  
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: true }
+    }
+  }));
+  
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
+
+  const serializer = store.serializerFor("artist");
+  let artistJSON;
+
+  let error = null;
+  
+  Ember.run(function() {
+    
+    const artist = store.createRecord('artist', { name: "Radiohead" });
+    const album1 = store.createRecord('album', { name: "Kid A" });
+    const album2 = store.createRecord('album', { id: "2", name: "Kid B" });
+    artist.get('albums').pushObjects([album1, album2]);
+  
+    artistJSON = serializer.serialize(artist._createSnapshot());
+    
+    const serverJSON = { 
+      data: 
+      { 
+        id: "1",
+        attributes: { name: 'Radiohead' },
+        relationships: {
+          albums: {
+            "links": {
+              "self": "http://example.com/artists/1/relationships/album"
+            }
+          }
+        },
+        type: 'artists'
+      }
+    };
+    
+    try
+    {
+      serializer.normalizeResponse(store, Artist, serverJSON, '1', 'createRecord');
+    }
+    catch (e)
+    {
+      error = e;
+    }
+  });
+  
+  // should not have failed
+
+  assert.equal(error, null);
+});
+
 test("normalize artist + album when data is included", function(assert) {
   
   registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {

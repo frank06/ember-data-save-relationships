@@ -120,7 +120,7 @@ export default Ember.Mixin.create({
 
     Object.keys(rels).forEach(rel => {
       let relationshipData = rels[rel].data;
-      if (relationshipData !== undefined)
+      if (relationshipData)
       {
         this.normalizeRelationship(relationshipData, store, included);
       }
