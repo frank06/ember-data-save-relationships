@@ -109,11 +109,16 @@ export default Ember.Mixin.create({
   normalizeSaveResponse(store, modelName, obj) {
     const rels = obj.data.relationships || [];
     
+    const included = obj.included.reduce((prev, current) => {
+      prev[current.id] = current;
+      return prev;
+    }, {});
+
     Object.keys(rels).forEach(rel => {
       let relationshipData = rels[rel].data;
       if (relationshipData !== undefined)
       {
-        this.normalizeRelationship(relationshipData, store, obj);
+        this.normalizeRelationship(relationshipData, store, obj, included);
       }
     });
 
@@ -121,14 +126,14 @@ export default Ember.Mixin.create({
 
   },
 
-  normalizeRelationship(relationshipData, store, obj) {
+  normalizeRelationship(relationshipData, store, obj, included) {
     if (Array.isArray(relationshipData)) {
       // hasMany
       relationshipData = relationshipData.map(json => {
-        let includedData = obj.included.filter(datum => datum.id === json.id);
-        if (includedData.length > 0)
+        let includedData = included[json.id];
+        if (includedData)
         {
-          json = includedData[0];
+          json = includedData;
         }
         let internalRelationships = json.relationships;
         if (internalRelationships !== undefined) {
