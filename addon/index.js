@@ -109,16 +109,20 @@ export default Ember.Mixin.create({
   normalizeSaveResponse(store, modelName, obj) {
     const rels = obj.data.relationships || [];
     
-    const included = obj.included.reduce((prev, current) => {
-      prev[current.id] = current;
-      return prev;
-    }, {});
+    let included = {};
+    if (obj.included)
+    {
+      included = obj.included.reduce((prev, current) => {
+        prev[current.id] = current;
+        return prev;
+      }, {});
+    }
 
     Object.keys(rels).forEach(rel => {
       let relationshipData = rels[rel].data;
       if (relationshipData !== undefined)
       {
-        this.normalizeRelationship(relationshipData, store, obj, included);
+        this.normalizeRelationship(relationshipData, store, included);
       }
     });
 
@@ -126,7 +130,7 @@ export default Ember.Mixin.create({
 
   },
 
-  normalizeRelationship(relationshipData, store, obj, included) {
+  normalizeRelationship(relationshipData, store, included) {
     if (Array.isArray(relationshipData)) {
       // hasMany
       relationshipData = relationshipData.map(json => {
@@ -138,7 +142,7 @@ export default Ember.Mixin.create({
         let internalRelationships = json.relationships;
         if (internalRelationships !== undefined) {
           Object.keys(internalRelationships).forEach(rel => {
-            this.normalizeRelationship(internalRelationships[rel].data, store);
+            this.normalizeRelationship(internalRelationships[rel].data, store, included);
           });
         }
         json.type = Ember.String.singularize(json.type);
@@ -149,7 +153,7 @@ export default Ember.Mixin.create({
       let internalRelationships = relationshipData.relationships;
       if (internalRelationships !== undefined) {
         Object.keys(internalRelationships).forEach(rel => {
-          this.normalizeRelationship(internalRelationships[rel].data, store);
+          this.normalizeRelationship(internalRelationships[rel].data, store, included);
         });
       }
       relationshipData.type = Ember.String.singularize(relationshipData.type);
