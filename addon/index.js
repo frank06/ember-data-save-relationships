@@ -7,7 +7,7 @@ export default Ember.Mixin.create({
     const relKind = rel.kind;
     const relKey = rel.key;
 
-    if (this.get(`attrs.${relKey}.serialize`) === true) {
+    if (data && this.get(`attrs.${relKey}.serialize`) === true) {
 
       data.relationships = data.relationships || {};
       const key = this.keyForRelationship(relKey, relKind, 'serialize');
@@ -96,7 +96,7 @@ export default Ember.Mixin.create({
           json.type = Ember.String.singularize(json.type);
           this.updateRecord(json, store);
         });
-      } else {
+      } else if (relationshipData) {
         // belongsTo
         relationshipData.type = Ember.String.singularize(relationshipData.type);
         relationshipData = this.updateRecord(relationshipData, store);
