@@ -4,7 +4,7 @@ Include this mixin in your serializers and it will save your `hasMany` and `belo
 
 For example:
 
-```
+```javascript
 // app/serializers/artist.js
 
 import JSONAPISerializer from 'ember-data/serializers/json-api';
@@ -19,7 +19,7 @@ export default JSONAPISerializer.extend(SaveRelationshipsMixin, {
 
 Now an `Artist` payload may include `attributes` like:
 
-```
+```javascript
 data: {
   id: null,
   type: "artist",
