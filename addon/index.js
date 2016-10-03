@@ -72,12 +72,10 @@ export default Ember.Mixin.create({
       .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
 
     if (record) {
-      // record.unloadRecord();
       record.set('id', json.id);
       record._internalModel.flushChangedAttributes();
       record._internalModel.adapterWillCommit();
       store.didSaveRecord(record._internalModel);
-      // store.push({ data: json });
     }
 
     return json;
@@ -89,6 +87,12 @@ export default Ember.Mixin.create({
     const rels = obj.data.relationships || [];
 
     Object.keys(rels).forEach(rel => {
+
+      // guard against potential `null` relationship, allowed by JSON API
+      if (!rels[rel]) {
+        return;
+      }
+
       let relationshipData = rels[rel].data;
       if (Array.isArray(relationshipData)) {
         // hasMany
@@ -96,7 +100,7 @@ export default Ember.Mixin.create({
           json.type = Ember.String.singularize(json.type);
           this.updateRecord(json, store);
         });
-      } else if (relationshipData) {
+      } else {
         // belongsTo
         relationshipData.type = Ember.String.singularize(relationshipData.type);
         relationshipData = this.updateRecord(relationshipData, store);
