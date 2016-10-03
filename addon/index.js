@@ -7,7 +7,7 @@ export default Ember.Mixin.create({
     const relKind = rel.kind;
     const relKey = rel.key;
 
-    if (this.get(`attrs.${relKey}.serialize`) === true) {
+    if (data && this.get(`attrs.${relKey}.serialize`) === true) {
 
       data.relationships = data.relationships || {};
       const key = this.keyForRelationship(relKey, relKind, 'serialize');
@@ -72,12 +72,10 @@ export default Ember.Mixin.create({
       .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
 
     if (record) {
-      // record.unloadRecord();
       record.set('id', json.id);
       record._internalModel.flushChangedAttributes();
       record._internalModel.adapterWillCommit();
       store.didSaveRecord(record._internalModel);
-      // store.push({ data: json });
     }
 
     return json;
@@ -89,6 +87,12 @@ export default Ember.Mixin.create({
     const rels = obj.data.relationships || [];
 
     Object.keys(rels).forEach(rel => {
+
+      // guard against potential `null` relationship, allowed by JSON API
+      if (!rels[rel]) {
+        return;
+      }
+
       let relationshipData = rels[rel].data;
       if (Array.isArray(relationshipData)) {
         // hasMany
