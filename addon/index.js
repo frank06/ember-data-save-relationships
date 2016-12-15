@@ -16,7 +16,7 @@ export default Ember.Mixin.create({
         data.relationships[key].data = this.serializeRecord(snapshot.belongsTo(relKey));
       }
       
-      if (relKind === "hasMany") {
+      if (relKind === "hasMany" && typeof(snapshot.hasMany(relKey)) !== "undefined") {
         data.relationships[key].data = snapshot.hasMany(relKey).map(this.serializeRecord.bind(this));
       }
       
