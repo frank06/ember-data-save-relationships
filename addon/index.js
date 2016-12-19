@@ -86,7 +86,8 @@ export default Ember.Mixin.create({
   updateRecord(json, store) {
     if (json.attributes !== undefined && json.attributes.__id__ !== undefined)
     {
-
+      json.type = Ember.String.singularize(json.type);
+      
       const record = store.peekAll(json.type)
         .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
         .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
@@ -126,38 +127,41 @@ export default Ember.Mixin.create({
       }
     });
 
-    return this._super(store, modelName, obj);
+    // now run through the included objects looking for client ids
+    if (obj.included) {
+      for(let includedItem of obj.included) {
+        this.updateRecord(includedItem, store);
+      }
+    }
 
+    return this._super(store, modelName, obj);
   },
 
   normalizeRelationship(relationshipData, store, included) {
     if (Array.isArray(relationshipData)) {
       // hasMany
-      relationshipData = relationshipData.map(json => {
-        let includedData = included[json.id];
-        if (includedData)
-        {
-          json = includedData;
-        }
-        let internalRelationships = json.relationships;
-        if (internalRelationships !== undefined) {
-          Object.keys(internalRelationships).forEach(rel => {
-            this.normalizeRelationship(internalRelationships[rel].data, store, included);
-          });
-        }
-        json.type = Ember.String.singularize(json.type);
-        this.updateRecord(json, store);
-      });
+      relationshipData = relationshipData.map(item => this.normalizeRelationshipItem(item, store, included));
     } else if (relationshipData) {
-      // belongsTo
-      let internalRelationships = relationshipData.relationships;
-      if (internalRelationships !== undefined) {
-        Object.keys(internalRelationships).forEach(rel => {
-          this.normalizeRelationship(internalRelationships[rel].data, store, included);
-        });
-      }
-      relationshipData.type = Ember.String.singularize(relationshipData.type);
-      relationshipData = this.updateRecord(relationshipData, store);
+      this.normalizeRelationshipItem(relationshipData, store, included);
+    }
+  },
+
+  normalizeRelationshipItem(item, store, included) {
+    let includedData = included[item.id];
+    if (includedData)
+    {
+      item = includedData;
+    }
+    let internalRelationships = item.relationships;
+    if (internalRelationships !== undefined) {
+      Object.keys(internalRelationships).forEach(rel => {
+        this.normalizeRelationship(internalRelationships[rel].data, store, included);
+      });
+    }
+    if (!includedData)
+    {
+      // if it's in the included block then it will be updated at the end of normalizeSaveResponse
+      this.updateRecord(item, store);
     }
   }
 

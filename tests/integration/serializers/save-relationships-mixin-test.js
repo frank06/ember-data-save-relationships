@@ -557,8 +557,6 @@ test("normalize artist + album when data is included", function(assert) {
     
     serializer.normalizeResponse(store, Artist, serverJSON, '1', 'createRecord');
 
-  });
-  
   // first album should be in a saved state and have an id
   const firstAlbum = store.peekAll('album').findBy("name", "Kid A");
   assert.equal(firstAlbum.get('currentState.stateName'), "root.loaded.saved");
@@ -567,6 +565,7 @@ test("normalize artist + album when data is included", function(assert) {
   const secondAlbum = store.peekAll('album').objectAt(1);
   assert.equal(secondAlbum.get('name'), "Kid B");
 
+  });
 });
 
 test("normalize artist + album when artist's albums relationship is lazy loaded but albums are included", function(assert) {
@@ -632,9 +631,8 @@ test("normalize artist + album when artist's albums relationship is lazy loaded 
     {
       error = e;
     }
-  });
-  
-  // should not have failed
+
+      // should not have failed
 
   assert.equal(error, null);
 
@@ -645,6 +643,9 @@ test("normalize artist + album when artist's albums relationship is lazy loaded 
   
   const secondAlbum = store.peekAll('album').objectAt(1);
   assert.equal(secondAlbum.get('name'), "Kid B");
+  });
+  
+
 });
 
 test("normalize artist with embedded album (with ID) with embedded tracks", function(assert) {
