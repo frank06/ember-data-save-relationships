@@ -569,6 +569,84 @@ test("normalize artist + album when data is included", function(assert) {
 
 });
 
+test("normalize artist + album when artist's albums relationship is lazy loaded but albums are included", function(assert) {
+  
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: true }
+    }
+  }));
+  
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
+
+  const serializer = store.serializerFor("artist");
+  let artistJSON;
+
+  let error = null;
+  
+  Ember.run(function() {
+    
+    const artist = store.createRecord('artist', { name: "Radiohead" });
+    const album1 = store.createRecord('album', { name: "Kid A" });
+    const album2 = store.createRecord('album', { id: "2", name: "Kid B" });
+    artist.get('albums').pushObjects([album1, album2]);
+  
+    artistJSON = serializer.serialize(artist._createSnapshot());
+    
+    const serverJSON = { 
+      data: 
+      { 
+        id: "1",
+        attributes: { name: 'Radiohead' },
+        relationships: {
+          albums: {
+            "links": {
+              "related": "http://example.com/artists/1/relationships/album"
+            }
+          }
+        },
+        "links": {
+          "albums": "http://example.com/artists/1/relationships/album"
+        },
+        type: 'artists'
+      },
+      included: [
+        { 
+          id: "89329",
+          attributes: { name: "Kid A", __id__: getInternalId(album1) },
+          type: 'album'
+        },
+        {
+          id: "2",
+          attributes: { name: "Kid B" },
+          type: 'albums'
+        }
+      ]
+    };
+    
+    try
+    {
+      serializer.normalizeResponse(store, Artist, serverJSON, '1', 'createRecord');
+    }
+    catch (e)
+    {
+      error = e;
+    }
+  });
+  
+  // should not have failed
+
+  assert.equal(error, null);
+
+  // first album should be in a saved state and have an id
+  const firstAlbum = store.peekAll('album').findBy("name", "Kid A");
+  assert.equal(firstAlbum.get('currentState.stateName'), "root.loaded.saved");
+  assert.equal(firstAlbum.get('id'), "89329");
+  
+  const secondAlbum = store.peekAll('album').objectAt(1);
+  assert.equal(secondAlbum.get('name'), "Kid B");
+});
+
 test("normalize artist with embedded album (with ID) with embedded tracks", function(assert) {
   
   registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
