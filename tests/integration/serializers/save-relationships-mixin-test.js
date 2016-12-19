@@ -847,6 +847,7 @@ test("normalize album belongs-to artist", function(assert) {
         type: 'albums',
         attributes: { name: "Kid A"},
         relationships: {
+          'contact-person': null,
           artists: {
             data: [{
               id: "1",
