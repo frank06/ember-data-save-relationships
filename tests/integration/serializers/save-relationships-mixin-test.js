@@ -585,7 +585,7 @@ test("normalize artist + album when data is included does not duplicate models",
   
   Ember.run(function() {
     
-    const artist = store.createRecord('artist', { name: "Radiohead" });
+    const artist = store.createRecord('artist', { id: "1", name: "Radiohead" });
     const album1 = store.createRecord('album', { name: "Kid A" });
     const album2 = store.createRecord('album', { id: "2", name: "Kid B" });
     artist.get('albums').pushObjects([album1, album2]);
