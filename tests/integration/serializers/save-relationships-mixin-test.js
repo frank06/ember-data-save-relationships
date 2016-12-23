@@ -112,24 +112,24 @@ test("serialize artist with embedded albums (with ID)", function(assert) {
     
     artistJSON = serializer.serialize(artist._createSnapshot());
 
-  });
-  
-  const albumsJSON = { data: [
-    { attributes: { name: 'Kid A', __id__: '1internal-model' },
-      type: 'albums' },
-    { attributes: { name: 'Kid B', __id__: '2internal-model' },
-      type: 'albums' },
-    { attributes: { name: 'Kid C', __id__: '3internal-model' },
-    type: 'albums' } ]
-  };
-  
-  assert.deepEqual(artistJSON, { data: {
-      attributes: { name: 'Radiohead' },
-      relationships: { albums: albumsJSON },
-      type: 'artists'
-    }
-  });
+    const albumsJSON = { data: [
+      { attributes: { name: 'Kid A', __id__: getInternalId(album1) },
+        type: 'albums' },
+      { attributes: { name: 'Kid B', __id__: getInternalId(album2) },
+        type: 'albums' },
+      { attributes: { name: 'Kid C', __id__: getInternalId(album3) },
+      type: 'albums' } ]
+    };
+    
+    assert.deepEqual(artistJSON, { data: {
+        attributes: { name: 'Radiohead' },
+        relationships: { albums: albumsJSON },
+        type: 'artists'
+      }
+    });
 
+  });
+  
 });
 
 test("serialize artist with embedded album (with ID) with embedded tracks", function(assert) {
@@ -557,14 +557,84 @@ test("normalize artist + album when data is included", function(assert) {
     
     serializer.normalizeResponse(store, Artist, serverJSON, '1', 'createRecord');
 
-  // first album should be in a saved state and have an id
-  const firstAlbum = store.peekAll('album').findBy("name", "Kid A");
-  assert.equal(firstAlbum.get('currentState.stateName'), "root.loaded.saved");
-  assert.equal(firstAlbum.get('id'), "89329");
-  
-  const secondAlbum = store.peekAll('album').objectAt(1);
-  assert.equal(secondAlbum.get('name'), "Kid B");
+    // first album should be in a saved state and have an id
+    const firstAlbum = store.peekAll('album').findBy("name", "Kid A");
+    assert.equal(firstAlbum.get('currentState.stateName'), "root.loaded.saved");
+    assert.equal(firstAlbum.get('id'), "89329");
+    
+    const secondAlbum = store.peekAll('album').objectAt(1);
+    assert.equal(secondAlbum.get('name'), "Kid B");
 
+  });
+});
+
+test("normalize artist + album when data is included does not duplicate models", function(assert) {
+  
+  const done = assert.async();
+
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: true }
+    }
+  }));
+  
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin));
+
+  const serializer = store.serializerFor("artist");
+  let artistJSON;
+  
+  Ember.run(function() {
+    
+    const artist = store.createRecord('artist', { name: "Radiohead" });
+    const album1 = store.createRecord('album', { name: "Kid A" });
+    const album2 = store.createRecord('album', { id: "2", name: "Kid B" });
+    artist.get('albums').pushObjects([album1, album2]);
+  
+    artistJSON = serializer.serialize(artist._createSnapshot());
+    
+    const serverJSON = { 
+      data: 
+      {
+        id: "1",
+        type: 'artists',
+        attributes: { name: 'Radiohead' },
+        relationships: { 
+          albums: { 
+            data: [ 
+              { 
+                id: "89329",
+                type: 'album'
+              },
+              {
+                id: "2",
+                type: 'albums'
+              }
+            ]
+          }
+        }
+      },
+      included: [
+        { 
+          id: "89329",
+          attributes: { name: "Kid A", __id__: getInternalId(album1) },
+          type: 'album'
+        },
+        {
+          id: "2",
+          attributes: { name: "Kid B" },
+          type: 'albums'
+        }
+      ]
+    };
+    
+    serializer.normalizeResponse(store, Artist, serverJSON, '1', 'createRecord');
+
+    //should only have one album with id 89329
+    const allAlbums = store.peekAll('album').toArray();
+    assert.equal(allAlbums.length, 2, "should have two albums");
+    const albums = allAlbums.filter(model => model.get("id") === "89329");
+    assert.equal(albums.length, 1, "should only have one album with the server-side id");
+    done();
   });
 });
 
