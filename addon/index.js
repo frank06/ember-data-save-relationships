@@ -5,21 +5,21 @@ export default Ember.Mixin.create({
   serializeRelationship(snapshot, data, rel) {
     const relKind = rel.kind;
     const relKey = rel.key;
-
+    
     if (data && this.get(`attrs.${relKey}.serialize`) === true) {
 
       data.relationships = data.relationships || {};
       const key = this.keyForRelationship(relKey, relKind, 'serialize');
       data.relationships[key] = data.relationships[key] || {};
-
+      
       if (relKind === "belongsTo") {
         data.relationships[key].data = this.serializeRecord(snapshot.belongsTo(relKey));
       }
-
-      if (relKind === "hasMany") {
+      
+      if (relKind === "hasMany" && typeof(snapshot.hasMany(relKey)) !== "undefined") {
         data.relationships[key].data = snapshot.hasMany(relKey).map(this.serializeRecord.bind(this));
       }
-
+      
     }
 
   },
@@ -41,13 +41,6 @@ export default Ember.Mixin.create({
     
     const serialized = obj.serialize({__isSaveRelationshipsMixinCallback: true});
 
-  serializeRecord(obj) {
-
-    if (!obj) {
-      return null;
-    }
-
-    const serialized = obj.serialize();
     if (obj.id) {
       serialized.data.id = obj.id;
       this.get('_visitedRecordIds')[obj.id] = {};
@@ -76,27 +69,25 @@ export default Ember.Mixin.create({
     // // do not allow embedded relationships
     // delete serialized.data.relationships;
   
-    // do not allow embedded relationships
-    delete serialized.data.relationships;
-
     return serialized.data;
-
+  
   },
-
+  
   serializeHasMany() {
     this._super(...arguments);
     this.serializeRelationship(...arguments);
   },
-
+  
   serializeBelongsTo() {
     this._super(...arguments);
     this.serializeRelationship(...arguments);
   },
-
+  
   updateRecord(json, store) {
     if (json.attributes !== undefined && json.attributes.__id__ !== undefined)
     {
-
+      json.type = Ember.String.singularize(json.type);
+      
       const record = store.peekAll(json.type)
         .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
         .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
@@ -110,21 +101,6 @@ export default Ember.Mixin.create({
         // store.push({ data: json });
       }
 
-
-    if (!json.attributes) {
-      // return non-attribute (id/type only) JSON intact
-      return json;
-    }
-
-    const record = store.peekAll(json.type)
-      .filterBy('currentState.stateName', "root.loaded.created.uncommitted")
-      .findBy('_internalModel.' + Ember.GUID_KEY, json.attributes.__id__);
-
-    if (record) {
-      record.set('id', json.id);
-      record._internalModel.flushChangedAttributes();
-      record._internalModel.adapterWillCommit();
-      store.didSaveRecord(record._internalModel);
     }
 
     return json;
@@ -143,65 +119,49 @@ export default Ember.Mixin.create({
       }, {});
     }
 
-    const rels = obj.data.relationships || [];
-
     Object.keys(rels).forEach(rel => {
-
-      // guard against potential `null` relationship, allowed by JSON API
-      if (!rels[rel]) {
-        return;
-      }
-
       let relationshipData = rels[rel].data;
       if (relationshipData)
       {
         this.normalizeRelationship(relationshipData, store, included);
-      if (Array.isArray(relationshipData)) {
-        // hasMany
-        relationshipData = relationshipData.map(json => {
-          json.type = Ember.String.singularize(json.type);
-          this.updateRecord(json, store);
-        });
-      } else {
-        // belongsTo
-        relationshipData.type = Ember.String.singularize(relationshipData.type);
-        relationshipData = this.updateRecord(relationshipData, store);
       }
-
     });
 
-    return this._super(store, modelName, obj);
+    // now run through the included objects looking for client ids
+    if (obj.included) {
+      for(let includedItem of obj.included) {
+        this.updateRecord(includedItem, store);
+      }
+    }
 
+    return this._super(store, modelName, obj);
   },
 
   normalizeRelationship(relationshipData, store, included) {
     if (Array.isArray(relationshipData)) {
       // hasMany
-      relationshipData = relationshipData.map(json => {
-        let includedData = included[json.id];
-        if (includedData)
-        {
-          json = includedData;
-        }
-        let internalRelationships = json.relationships;
-        if (internalRelationships !== undefined) {
-          Object.keys(internalRelationships).forEach(rel => {
-            this.normalizeRelationship(internalRelationships[rel].data, store, included);
-          });
-        }
-        json.type = Ember.String.singularize(json.type);
-        this.updateRecord(json, store);
+      relationshipData = relationshipData.map(item => this.normalizeRelationshipItem(item, store, included));
+    } else if (relationshipData) {
+      this.normalizeRelationshipItem(relationshipData, store, included);
+    }
+  },
+
+  normalizeRelationshipItem(item, store, included) {
+    let includedData = included[item.id];
+    if (includedData)
+    {
+      item = includedData;
+    }
+    let internalRelationships = item.relationships;
+    if (internalRelationships !== undefined) {
+      Object.keys(internalRelationships).forEach(rel => {
+        this.normalizeRelationship(internalRelationships[rel].data, store, included);
       });
-    } else {
-      // belongsTo
-      let internalRelationships = relationshipData.relationships;
-      if (internalRelationships !== undefined) {
-        Object.keys(internalRelationships).forEach(rel => {
-          this.normalizeRelationship(internalRelationships[rel].data, store, included);
-        });
-      }
-      relationshipData.type = Ember.String.singularize(relationshipData.type);
-      relationshipData = this.updateRecord(relationshipData, store);
+    }
+    if (!includedData)
+    {
+      // if it's in the included block then it will be updated at the end of normalizeSaveResponse
+      this.updateRecord(item, store);
     }
   }
 
