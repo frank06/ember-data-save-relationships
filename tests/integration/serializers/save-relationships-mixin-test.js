@@ -205,7 +205,6 @@ test("serialize artist with embedded album (with ID) with embedded tracks", func
 
 });
 
-
 test("serialize model with no attributes", function(assert) {
   
   registry.register('serializer:simple-model-container', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
@@ -338,7 +337,6 @@ test("serialize artist with embedded contact person and albums (with ID)", funct
   });
 
 });
-
 
 test("serialize artist with embedded albums (with and without ID)", function(assert) {
   
@@ -1065,6 +1063,78 @@ test("normalize album belongs-to artist when data is included", function(assert)
           attributes: {
             name: "Radiohead XXXX",
             __id__: internalId
+          }
+        }
+      ]
+    };
+    
+    serializer.normalizeResponse(store, Album, serverJSON, '1', 'createRecord');
+
+  });
+  
+  // should NOT update name
+  const firstAlbum = store.peekAll('album').findBy("name", "Kid A");
+  assert.equal(firstAlbum.get('artist.name'), "Radiohead");
+
+});
+
+
+test("normalize album belongs-to artist when recursive data is included", function(assert) {
+  
+  registry.register('serializer:artist', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      albums: { serialize: false }
+    }
+  }));
+  
+  registry.register('serializer:album', DS.JSONAPISerializer.extend(SaveRelationshipsMixin, {
+    attrs: {
+      artist: { serialize: true }
+    }
+  }));
+
+  const serializer = store.serializerFor("album");
+  let albumJSON;
+  
+  Ember.run(function() {
+    
+    const artist = store.createRecord('artist', { name: "Radiohead" });
+    const album = store.createRecord('album', { name: "Kid A", artist });
+  
+    albumJSON = serializer.serialize(album._createSnapshot());
+    
+    const internalId = albumJSON.data.relationships.artist.data.attributes.__id__;
+    
+    const serverJSON = { data:
+      {
+        id: "1",
+        type: 'albums',
+        attributes: { name: "Kid A"},
+        relationships: {
+          artists: {
+            data: {
+              id: "1",
+              type: "artists"
+            }
+          }
+        }
+      },
+
+      included: [
+        {
+          id: "1",
+          type: "artists",
+          attributes: {
+            name: "Radiohead XXXX",
+            __id__: internalId
+          },
+          relationships: {
+            albums: {
+              data: {
+                id: "1",
+                type: "albums"
+              }
+            }
           }
         }
       ]

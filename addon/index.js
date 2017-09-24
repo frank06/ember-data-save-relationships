@@ -147,6 +147,8 @@ export default Ember.Mixin.create({
   },
 
   normalizeRelationshipItem(item, store, included) {
+    if (item.__normalized) { return; }
+    item.__normalized = true;
     let includedData = included[item.id];
     if (includedData)
     {
