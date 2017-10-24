@@ -1,5 +1,7 @@
 # ember-data-save-relationships
 
+## NOTE: I am not maintaining this add-on anymore. It was a fun exercise but never ended up using it in production environments.
+
 Include this mixin in your serializers and it will save your `hasMany` and `belongsTo` relationships' records.
 
 For example:
