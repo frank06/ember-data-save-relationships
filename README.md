@@ -2,6 +2,10 @@
 
 ## NOTE: I am not maintaining this add-on anymore. It was a fun exercise but never ended up using it in production environments.
 
+### Please follow the official repo at: https://github.com/laborvoices/ember-data-save-relationships
+
+------
+
 Include this mixin in your serializers and it will save your `hasMany` and `belongsTo` relationships' records.
 
 For example:
